@@ -3,12 +3,14 @@ package com.example.ui_demoapplication;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -21,11 +23,14 @@ import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.gun0912.tedpermission.PermissionListener;
 import com.gun0912.tedpermission.normal.TedPermission;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,13 +47,16 @@ public class MainActivity extends AppCompatActivity {
     Button btn_Sua;
     Button btn_Xoa;
     NhanVienAdapter nvAdapter;
+    SharedPreferences sharedPreferences;
+    ListView lv_NhanVien;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         // Ánh Xạ:
-        Button bt_thoat = findViewById(R.id.button_thoat);
+        Button bt_Luu = findViewById(R.id.button_Luu);
         EditText et_MaSo = findViewById(R.id.editText_MaSo);
         EditText et_HoTen = findViewById(R.id.editText_HoTen);
         RadioGroup rg_GioiTinh = findViewById(R.id.radioGroup);
@@ -56,11 +64,14 @@ public class MainActivity extends AppCompatActivity {
         RadioButton rb_Nu = findViewById(R.id.radioButton_Nu);
         Spinner sp_DonVi = findViewById(R.id.spinner_DonVi);
         Button bt_Them = findViewById(R.id.button_Them);
-        ListView lv_NhanVien = findViewById(R.id.listView_NhanVien);
+        lv_NhanVien = findViewById(R.id.listView_NhanVien);
         img_Photo = findViewById(R.id.imageView_Photo);
         btn_ChonAnh = findViewById(R.id.button_ChonAnh);
         btn_Sua = findViewById(R.id.button_Sua);
         btn_Xoa = findViewById(R.id.button_Xoa);
+        sharedPreferences = getSharedPreferences("DanhSachNhanVien", MODE_PRIVATE);
+
+        loadListNhanVien();
 
         // Load danh sách Đơn vị vào Spinner Đơn Vị:
         dv_list = getResources().getStringArray(R.array.donvi_list);
@@ -125,7 +136,16 @@ public class MainActivity extends AppCompatActivity {
             Bitmap bitmap = BitmapFactory.decodeByteArray(nv.getImgNV(), 0, nv.getImgNV().length);
             img_Photo.setImageBitmap(bitmap);
         });
-        bt_thoat.setOnClickListener(view -> finish());
+        bt_Luu.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                Gson gson = new Gson();
+                String json = gson.toJson(nv_list);
+                editor.putString("listNhanVien", json);
+                editor.commit();
+            }
+        });
 
         btn_Sua.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -199,5 +219,28 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 });
+    }
+
+    private void loadListNhanVien() {
+        if(getList() != null){
+            for (NhanVien nv :
+                    getList()) {
+                nv_list.add(nv);
+            }
+            nvAdapter = new NhanVienAdapter(MainActivity.this, R.layout.listview_nv, nv_list);
+            lv_NhanVien.setAdapter(nvAdapter);
+            nvAdapter.notifyDataSetChanged();
+        }
+    }
+
+    public List<NhanVien> getList() {
+        List<NhanVien> arrayItems = null;
+        String serializedObject = sharedPreferences.getString("listNhanVien", null);
+        if (serializedObject != null) {
+            Gson gson = new Gson();
+            Type type = new TypeToken<List<NhanVien>>(){}.getType();
+            arrayItems = gson.fromJson(serializedObject, type);
+        }
+        return arrayItems;
     }
 }
